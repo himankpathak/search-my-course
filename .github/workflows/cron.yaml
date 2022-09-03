@@ -1,0 +1,12 @@
+name: weekdays-cron
+on:
+  schedule:
+    - cron: '16 * * * *'
+jobs:
+  cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the API alert route
+        run: |
+          curl --request GET \
+          --url '${{ secrets.API_ROUTE }}'
