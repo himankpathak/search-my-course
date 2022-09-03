@@ -1,7 +1,11 @@
 from flask import Flask, render_template
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
-import requests, time
+import requests, os
+
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 app = Flask(__name__)
 
@@ -79,78 +83,112 @@ columns = [
 ]
 
 
+def getCurrDate():
+    now = datetime.now()
+    now = now.replace(tzinfo=ZoneInfo("America/New_York"))
+    return now
+
+
 def sendAlert():
-    pass
+    now = getCurrDate()
+
+    message = Mail(
+        from_email="a@example.com",
+        to_emails=["b@example.com", "c@example.com"],
+        subject="!!IMPORTANT!! Course Registration Open!",
+        html_content="<strong>Hello, Course registration is open.</strong><br/>Open at:"
+        + now.strftime("%m/%d/%Y, %H:%M:%S")
+        + "<br/>Link: https://x-y-z.vercel.app/",
+    )
+
+    try:
+        sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
+        response = sg.send(message)
+        print(response.status_code)
+        print(response.body)
+        print(response.headers)
+    except Exception as e:
+        print(e)
 
 
 @app.route("/")
 def main():
-    url = "https://ais.kube.ohio.edu/api/course-offerings/search/query?selectedTab=ATHN&page=1&pageSize=50"
-    body = {
-        # "terms": ["2231::FALL", "2235::SPRING"],
-        "terms": ["2231::FALL"],
-        "campuses": ["ATHN"],
-        "subjects": ["CS", "EE"],
-        "catalogNumber": "",
-        "name": "",
-        "topic": "",
-        "level": "GRAD",
-        "status": ["OPEN", "WAITLIST", "FULL", "MAJORS", "PERMISSION"],
-        "generalEducationTier1": [],
-        "generalEducationTier2": [],
-        "generalEducationTier3": [],
-        "bricks": [],
-        "isSync": True,
-        "isAsync": True,
-        "instructors": [],
-        "description": "",
-        "offeredInPerson": True,
-        "offeredOnline": True,
-        "days": [],
-        "eligibleGrades": "",
-        "building": [],
-    }
+    return searchCourse(["2231::FALL"], False)
 
-    # while True:
-    #     time.sleep(10 * 1000)
-    response = requests.post(
-        url,
-        headers={
-            "accept": "application/json, text/plain, */*",
-            "accept-language": "en-US,en;q=0.9",
-            "content-type": "application/json",
-            "sec-ch-ua": '"Chromium";v="104", " Not A;Brand";v="99", "Google Chrome";v="104"',
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": '"Windows"',
-            "sec-fetch-dest": "empty",
-            "sec-fetch-mode": "cors",
-            "sec-fetch-site": "same-site",
-            "Referer": "https://webapps.ohio.edu/",
-            "Referrer-Policy": "strict-origin-when-cross-origin",
-        },
-        json=body,
-    )
 
-    now = datetime.now()
-    # data = response.read()
-    # dict = json.loads(response.json)
+@app.route("/alert")
+def alert():
+    return searchCourse(["2225::SPRING"], True)
 
-    result = response.json()["results"]
 
-    data = []
-    for c in result:
-        app.logger.info(str(filterFrom[c["subject"]]))
-        app.logger.info([c["catalogNumber"]])
+def searchCourse(terms, alert):
+    try:
+        url = "https://ais.kube.ohio.edu/api/course-offerings/search/query?selectedTab=ATHN&page=1&pageSize=50"
+        body = {
+            # "terms": ["2231::FALL", "2235::SPRING"],
+            "terms": terms,
+            "campuses": ["ATHN"],
+            "subjects": ["CS", "EE"],
+            "catalogNumber": "",
+            "name": "",
+            "topic": "",
+            "level": "GRAD",
+            "status": ["OPEN", "WAITLIST", "FULL", "MAJORS", "PERMISSION"],
+            "generalEducationTier1": [],
+            "generalEducationTier2": [],
+            "generalEducationTier3": [],
+            "bricks": [],
+            "isSync": True,
+            "isAsync": True,
+            "instructors": [],
+            "description": "",
+            "offeredInPerson": True,
+            "offeredOnline": True,
+            "days": [],
+            "eligibleGrades": "",
+            "building": [],
+        }
 
-        if c["catalogNumber"] in filterFrom[c["subject"]]:
-            app.logger.info("trueee", c["catalogNumber"])
-            data.append(c)
+        response = requests.post(
+            url,
+            headers={
+                "accept": "application/json, text/plain, */*",
+                "accept-language": "en-US,en;q=0.9",
+                "content-type": "application/json",
+                "sec-ch-ua": '"Chromium";v="104", " Not A;Brand";v="99", "Google Chrome";v="104"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"Windows"',
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-site",
+                "Referer": "https://webapps.ohio.edu/",
+                "Referrer-Policy": "strict-origin-when-cross-origin",
+            },
+            json=body,
+        )
 
-    app.logger.info(len(data))
+        now = getCurrDate()
 
-    return render_template(
-        "home.html",
-        data=data,
-        columns=columns,
-        time=now,
-    )
+        app.logger.info(response.json())
+        result = response.json()["results"]
+
+        if alert:
+            sendAlert()
+
+        data = []
+        for c in result:
+            if c["catalogNumber"] in filterFrom[c["subject"]]:
+                data.append(c)
+
+        app.logger.info(len(data))
+
+        return render_template(
+            "home.html",
+            data=data,
+            columns=columns,
+            time=now,
+            noAlert=not alert,
+        )
+    except Exception as e:
+        app.logger.error(e)
+        return str(e)

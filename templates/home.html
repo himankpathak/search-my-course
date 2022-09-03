@@ -37,8 +37,11 @@
         return row.enrolled + '/' + row.capacity
     }
 
-    window.setTimeout(function () {
-        window.location.reload();
-    }, 60 * 1000);
+    {% if noAlert %}
+        window.setTimeout(function () {
+            window.location.reload();
+        }, 60 * 1000);
+    {% endif %}
+
 </script>
 {% endblock %}
