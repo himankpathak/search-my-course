@@ -1,7 +1,7 @@
 name: weekdays-cron
 on:
   schedule:
-    - cron: '0 12-23 * * 1-5'
+    - cron: '0,30 12-23,0 * * 1-5'
 jobs:
   cron:
     runs-on: ubuntu-latest
