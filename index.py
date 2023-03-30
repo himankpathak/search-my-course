@@ -12,7 +12,7 @@ app = Flask(__name__)
 filterFrom = {
     "CS": {
         "5060",
-        "6040",
+        # "6040", #AA
         "6020",
         "6980",
         "5120",
@@ -20,7 +20,7 @@ filterFrom = {
         "5180",
         "5440",
         "5620",
-        "5750",
+        # "5750", # IE
         "5800",
         "6050",
         "6060",
@@ -39,7 +39,7 @@ filterFrom = {
         "6840",
         "6850",
         "6860",
-        "6890",
+        # "6890", # DL
     },
     "EE": {"6981", "6153", "6633", "6663", "6673", "6743"},
 }
@@ -111,17 +111,28 @@ def sendAlert():
         print(e)
 
 
+# "2227::SUMMERFULL", "2227::SUMMER1", "2227::SUMMER2", "2221::FALL", "2225::SPRING"
+
+
 @app.route("/")
 def main():
-    return searchCourse(["2231::FALL"], False)
+    return searchCourse(["2241::FALL"])
+
+
+@app.route("/all")
+def all():
+    return searchCourse(["2241::FALL"], 0, True)
 
 
 @app.route("/alert")
 def alert():
-    return searchCourse(["2225::SPRING"], True)
+    return searchCourse(["2241::FALL"], 3)
+    # return searchCourse(["2237::SUMMERFULL", "2237::SUMMER1", "2237::SUMMER2","2241::FALL"], True)
 
 
-def searchCourse(terms, alert):
+# Sends email when alert is more than 0 and
+# no of course is greater than or equal to alert
+def searchCourse(terms, alert=0, showAll=False):
     try:
         url = "https://ais.kube.ohio.edu/api/course-offerings/search/query?selectedTab=ATHN&page=1&pageSize=50"
         body = {
@@ -169,18 +180,16 @@ def searchCourse(terms, alert):
 
         now = getCurrDate()
 
-        app.logger.info(response.json())
+        # app.logger.info(response.json())
         result = response.json()["results"]
-
-        if alert:
-            sendAlert()
 
         data = []
         for c in result:
-            if c["catalogNumber"] in filterFrom[c["subject"]]:
+            if showAll or c["catalogNumber"] in filterFrom[c["subject"]]:
                 data.append(c)
 
-        app.logger.info(len(data))
+        if alert and len(data) >= alert:
+            sendAlert()
 
         return render_template(
             "home.html",
