@@ -16,12 +16,14 @@ filterFrom = {
         "6020",
         "6980",
         "5120",
+        "5150",
         "5160",
         "5180",
         "5440",
         "5620",
         # "5750", # IE
         "5800",
+        "5900",
         "6050",
         "6060",
         "6120",
@@ -113,21 +115,22 @@ def sendAlert():
 
 # "2227::SUMMERFULL", "2227::SUMMER1", "2227::SUMMER2", "2221::FALL", "2225::SPRING"
 
+# yearToSearch = ["2241::FALL"]
+yearToSearch = ["2245::SPRING"]
 
 @app.route("/")
 def main():
-    return searchCourse(["2241::FALL"])
+    return searchCourse(yearToSearch)
 
 
 @app.route("/all")
 def all():
-    return searchCourse(["2241::FALL"], 0, True)
+    return searchCourse(yearToSearch, 0, True)
 
 
 @app.route("/alert")
 def alert():
-    return searchCourse(["2241::FALL"], 3)
-    # return searchCourse(["2237::SUMMERFULL", "2237::SUMMER1", "2237::SUMMER2","2241::FALL"], True)
+    return searchCourse(yearToSearch, 1)
 
 
 # Sends email when alert is more than 0 and
